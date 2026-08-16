@@ -43,12 +43,15 @@ android {
         create("release") {
             val keystorePropertiesFile = rootProject.file("key.properties")
             if (keystorePropertiesFile.exists()) {
-                val keystoreProperties = java.util.Properties()
-                keystorePropertiesFile.inputStream().use { keystoreProperties.load(it) }
-                storeFile = file(keystoreProperties.getProperty("storeFile"))
-                storePassword = keystoreProperties.getProperty("storePassword")
-                keyAlias = keystoreProperties.getProperty("keyAlias")
-                keyPassword = keystoreProperties.getProperty("keyPassword")
+                val props = mutableMapOf<String, String>()
+                keystorePropertiesFile.readLines().forEach { line ->
+                    val parts = line.trim().split("=", limit = 2)
+                    if (parts.size == 2) props[parts[0].trim()] = parts[1].trim()
+                }
+                storeFile = file(props["storeFile"] ?: "")
+                storePassword = props["storePassword"]
+                keyAlias = props["keyAlias"]
+                keyPassword = props["keyPassword"]
             }
         }
     }
