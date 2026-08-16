@@ -16,7 +16,6 @@ class RegisterScreen extends ConsumerStatefulWidget {
 }
 
 class _RegisterScreenState extends ConsumerState<RegisterScreen> {
-  final _name = TextEditingController();
   final _username = TextEditingController();
   final _email = TextEditingController();
   final _password = TextEditingController();
@@ -26,7 +25,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   void dispose() {
-    _name.dispose();
     _username.dispose();
     _email.dispose();
     _password.dispose();
@@ -43,13 +41,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       final cred = await auth.registerWithEmail(_email.text, _password.text);
       final user = cred.user!;
 
-      // Cria o perfil ja com nome/username digitados (tela Editar Perfil).
+      // Cadastro so com usuario + e-mail + senha: o usuario vira o nome
+      // de exibicao do perfil (tela Editar Perfil).
+      final username = _username.text.trim().toLowerCase();
       final profile = auth.defaultProfile(user).copyWith(
-            name: _name.text,
-            username: _username.text.trim().toLowerCase(),
+            name: username,
+            username: username,
           );
       await ref.read(databaseServiceProvider).saveProfile(profile);
-      await user.updateProfile(displayName: _name.text);
+      await user.updateProfile(displayName: username);
     } catch (e) {
       setState(() => _error = e.toString());
     } finally {
@@ -77,8 +77,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 style: TextStyle(color: AppColors.textGrey),
               ),
               const SizedBox(height: 24),
-              TextField(controller: _name, decoration: _dec('Nome')),
-              const SizedBox(height: 12),
               TextField(controller: _username, decoration: _dec('Nome de usuário')),
               const SizedBox(height: 12),
               TextField(controller: _email, keyboardType: TextInputType.emailAddress, decoration: _dec('E-mail')),
