@@ -22,6 +22,13 @@ Future<void> main() async {
     firebase = await Firebase.initializeApp(
       options: DefaultFirebaseOptions.initial,
     );
+    // Chaves ainda sao placeholder (Firebase nunca foi configurado):
+    // nao deixa o login estourar com "API key not valid" nem erro 10
+    // do Google Sign-In. Mostra a tela de passo a passo no lugar.
+    if (_isPlaceholderConfig(DefaultFirebaseOptions.initial)) {
+      firebase = null;
+      firebaseError = 'Firebase ainda nao configurado (chaves placeholder).';
+    }
   } catch (e) {
     firebaseError = e.toString();
   }
@@ -92,6 +99,16 @@ class _Root extends ConsumerWidget {
   }
 }
 
+/// True quando lib/firebase_options.dart ainda contem os valores de exemplo
+/// (o projeto so passa a usar o Firebase real depois que o google-services.json
+/// e fornecido e o app e recompilado).
+bool _isPlaceholderConfig(FirebaseOptions opts) {
+  return opts.apiKey.contains('SUA_') ||
+      opts.appId.contains('SEU_') ||
+      opts.messagingSenderId.contains('SEU_') ||
+      opts.projectId.contains('SEU_');
+}
+
 /// Tela exibida quando o Firebase ainda nao foi configurado.
 class _FirebaseSetupScreen extends StatelessWidget {
   final String? error;
@@ -126,11 +143,10 @@ class _FirebaseSetupScreen extends StatelessWidget {
                   'Falta conectar o Firebase para o app funcionar.\n\n'
                   '1. Crie um projeto em console.firebase.google.com\n'
                   '2. Adicione um app Android com pacote: com.whitechat.app\n'
-                  '3. Baixe o google-services.json e coloque em android/app/\n'
-                  '4. Edite lib/firebase_options.dart com as chaves do projeto\n'
-                  '5. Ative Authentication (Google/E-mail/Telefone), Firestore,\n'
-                  '   Realtime Database, Storage e Cloud Messaging\n\n'
-                  'Depois disso, rode: flutter run',
+                  '3. Ative Authentication: E-mail/Senha, Google e Telefone\n'
+                  '4. Baixe o google-services.json e envie para a administracao\n'
+                  '5. O app e recompilado automaticamente com as chaves\n\n'
+                  'O arquivo tambem corrige o erro 10 do Google Sign-In.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: Colors.white70, height: 1.6),
                 ),
