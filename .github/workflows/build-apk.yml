@@ -44,12 +44,45 @@ jobs:
 
       - name: Criar google-services.json a partir do secret (se existir)
         shell: bash
+        env:
+          GS_JSON: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}
         run: |
-          if [ -n "${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}" ]; then
-            echo "${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}" > android/app/google-services.json
-            python3 -c "import json;json.load(open('android/app/google-services.json'))" \
-              || { echo "::error::google-services.json invalido (JSON mal formatado)."; exit 1; }
-            echo "google-services.json criado a partir do secret."
+          if [ -n "$GS_JSON" ]; then
+            printf '%s' "$GS_JSON" > android/app/google-services.json
+            python3 - <<'PYEOF' || exit 1
+          import base64, json, os
+          path = 'android/app/google-services.json'
+          raw = open(path, 'rb').read()
+          text = raw.decode('utf-8', 'replace').strip()
+          # Remove cercas de markdown (```json ... ```) e aspas externas
+          if text.startswith('```'):
+              text = text.split('\n', 1)[-1].rsplit('```', 1)[0].strip()
+          if (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
+              text = text[1:-1].strip()
+          candidates = []
+          for label, data in [('json', text)]:
+              try:
+                  candidates.append((label, json.loads(data)))
+                  break
+              except Exception:
+                  pass
+          else:
+              # Tenta base64 (alguns tutoriais mandam codificar o arquivo)
+              try:
+                  dec = base64.b64decode(text + '=' * (-len(text) % 4)).decode('utf-8')
+                  candidates.append(('base64', json.loads(dec)))
+              except Exception:
+                  pass
+          if not candidates:
+              head = repr(text[:120])
+              print('::error::O secret FIREBASE_GOOGLE_SERVICES_JSON nao e o JSON puro. Inicio do valor: ' + head)
+              print('::error::Cole o conteudo INTEIRO do google-services.json (comeca com { e termina com }).')
+              raise SystemExit(1)
+          label, data = candidates[0]
+          open(path, 'w').write(json.dumps(data, indent=2))
+          print(f'google-services.json criado a partir do secret ({label}).')
+          PYEOF
+            echo "google-services.json criado."
           else
             echo "::warning::Sem secret FIREBASE_GOOGLE_SERVICES_JSON. O APK sai em modo demonstracao."
           fi
