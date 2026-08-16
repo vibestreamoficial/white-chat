@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:firebase_storage/firebase_storage.dart';
 
@@ -29,7 +30,7 @@ class StorageService {
     final safe = uid ?? 'anon';
     final name = '${DateTime.now().millisecondsSinceEpoch}.$ext';
     final ref = _storage.ref().child('$folder/$safe/$name');
-    await ref.putData(bytes);
+    await ref.putData(Uint8List.fromList(bytes));
     return ref.getDownloadURL();
   }
 }

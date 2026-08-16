@@ -16,11 +16,13 @@ if (file("google-services.json").exists()) {
 
 android {
     namespace = "com.whitechat.app"
-    compileSdk = 35
+    compileSdk = 36
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
+        // Necessario para flutter_local_notifications
+        isCoreLibraryDesugaringEnabled = true
     }
 
     kotlin {
@@ -88,6 +90,7 @@ flutter {
 }
 
 dependencies {
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
     implementation(platform("com.google.firebase:firebase-bom:32.7.2"))
     implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.firebase:firebase-analytics")
