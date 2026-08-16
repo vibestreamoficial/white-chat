@@ -49,6 +49,14 @@ jobs:
         run: |
           if [ -n "$GS_JSON" ]; then
             printf '%s' "$GS_JSON" > android/app/google-services.json
+            python3 - <<'DIAG'
+          v = open('android/app/google-services.json','rb').read().decode('utf-8','replace')
+          print('DIAG tamanho:', len(v))
+          print('DIAG primeiro_ord:', ord(v[0]) if v else -1)
+          print('DIAG ultimo_ord:', ord(v[-1]) if v else -1)
+          for frag in ['{', '}', 'project_info', 'AIza', 'client', 'package_name', 'http', 'base64', 'json']:
+              print('DIAG contem_' + frag.replace('{','chave_abre').replace('}','chave_fecha').replace('.','_') + ':', frag in v)
+          DIAG
             python3 - <<'PYEOF' || exit 1
           import base64, json, os
           path = 'android/app/google-services.json'
