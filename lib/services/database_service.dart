@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+import '../models/chat.dart';
 import '../models/live.dart';
 import '../models/notification_item.dart';
 import '../models/post.dart';
@@ -10,17 +11,21 @@ import '../models/user_profile.dart';
 class DatabaseService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
 
+/// Converte o snapshot em Map (compativel com cloud_firestore 5.x e 6.x).
+Map<String, dynamic> _snapData(dynamic snap) =>
+    Map<String, dynamic>.from((snap.data() as Map?) ?? const {});
+
   // ---------------------------------------------------------------- perfis
   Future<UserProfile?> getProfile(String uid) async {
     final snap = await _db.collection('profiles').doc(uid).get();
     if (!snap.exists) return null;
-    return UserProfile.fromMap(uid, snap.data()!);
+    return UserProfile.fromMap(uid, _snapData(snap));
   }
 
   Stream<UserProfile?> streamProfile(String uid) {
     return _db.collection('profiles').doc(uid).snapshots().map((snap) {
       if (!snap.exists) return null;
-      return UserProfile.fromMap(uid, snap.data()!);
+      return UserProfile.fromMap(uid, _snapData(snap));
     });
   }
 
@@ -36,7 +41,7 @@ class DatabaseService {
         .get();
     if (q.docs.isEmpty) return null;
     final d = q.docs.first;
-    return UserProfile.fromMap(d.id, d.data());
+    return UserProfile.fromMap(d.id, _snapData(d));
   }
 
   Future<bool> usernameTaken(String username, String selfUid) async {
@@ -64,7 +69,7 @@ class DatabaseService {
       query = query.where('authorUid', whereIn: followingUids);
     }
     return query.snapshots().map((snap) {
-      return snap.docs.map((d) => VideoPost.fromMap(d.id, d.data())).toList();
+      return snap.docs.map((d) => VideoPost.fromMap(d.id, _snapData(d))).toList();
     });
   }
 
@@ -75,7 +80,7 @@ class DatabaseService {
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snap) {
-      return snap.docs.map((d) => VideoPost.fromMap(d.id, d.data())).toList();
+      return snap.docs.map((d) => VideoPost.fromMap(d.id, _snapData(d))).toList();
     });
   }
 
@@ -93,7 +98,7 @@ class DatabaseService {
         .where('status', isEqualTo: 'pendente')
         .orderBy('createdAt')
         .snapshots()
-        .map((snap) => snap.docs.map((d) => VideoPost.fromMap(d.id, d.data())).toList());
+        .map((snap) => snap.docs.map((d) => VideoPost.fromMap(d.id, _snapData(d))).toList());
   }
 
   // -------------------------------------------------------------- likes
@@ -121,7 +126,7 @@ class DatabaseService {
         .where('followerUid', isEqualTo: uid)
         .snapshots()
         .map((snap) => snap.docs.map((d) {
-              final data = d.data();
+              final data = _snapData(d);
               return UserProfile(
                 uid: (data['targetUid'] as String?) ?? '',
                 name: (data['targetName'] as String?) ?? '',
@@ -137,7 +142,7 @@ class DatabaseService {
         .collection('follows')
         .where('followerUid', isEqualTo: uid)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => (d.data()['targetUid'] as String?) ?? '').toList());
+        .map((snap) => snap.docs.map((d) => (_snapData(d)['targetUid'] as String?) ?? '').toList());
   }
 
   Future<bool> isFollowing(String targetUid, String uid) async {
@@ -205,7 +210,7 @@ class DatabaseService {
         .orderBy('at')
         .snapshots()
         .map((snap) => snap.docs.map((d) {
-              final m = d.data();
+              final m = _snapData(d);
               m['id'] = d.id;
               return m;
             }).toList());
@@ -224,7 +229,7 @@ class DatabaseService {
         .limit(200)
         .snapshots()
         .map((snap) => snap.docs
-            .map((d) => AppNotification.fromMap(d.id, d.data()))
+            .map((d) => AppNotification.fromMap(d.id, _snapData(d)))
             .toList());
   }
 
@@ -243,7 +248,7 @@ class DatabaseService {
         .where('active', isEqualTo: true)
         .orderBy('startedAt', descending: true)
         .snapshots()
-        .map((snap) => snap.docs.map((d) => LiveRoom.fromMap(d.id, d.data())).toList());
+        .map((snap) => snap.docs.map((d) => LiveRoom.fromMap(d.id, _snapData(d))).toList());
   }
 
   Future<void> endLive(String id) {
@@ -262,7 +267,7 @@ class DatabaseService {
         .orderBy('lastMessageAt', descending: true)
         .snapshots()
         .map((snap) => snap.docs.map((d) {
-              final data = d.data();
+              final data = _snapData(d);
               final otherUid = (data['members'] as List).firstWhere(
                     (m) => m != uid,
                     orElse: () => uid,

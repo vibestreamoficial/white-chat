@@ -1,28 +1,31 @@
 import 'dart:async';
 
 import 'package:agora_rtc_engine/agora_rtc_engine.dart';
+import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../config.dart';
 
-/// Lives com o Agora RTC (agora_rtc_engine).
+/// Lives com o Agora RTC (agora_rtc_engine 6.6.x).
 ///
 /// ANTES DE USAR:
 ///  - Cole o seu App ID em AppConfig.agoraAppId (lib/config.dart)
-///  - Libere as permissoes de camera/microfone no AndroidManifest
-///    (ja configuradas no projeto)
+///  - Permissoes de camera/microfone ja estao no AndroidManifest
 class LiveService {
   RtcEngine? _engine;
   bool _initialized = false;
 
   bool get isInitialized => _initialized;
 
+  /// Engine usado para montar as views de video (AgoraVideoView).
+  RtcEngine? get engine => _engine;
+
   Future<void> _requestPermissions() async {
     await [Permission.camera, Permission.microphone].request();
   }
 
   /// Inicializa o engine do Agora.
-  /// Sem App ID configurado, retorna false com [warning] preenchido.
+  /// Sem App ID configurado, retorna false (modo demonstracao).
   Future<bool> init({required int uid}) async {
     if (_initialized) return true;
     if (AppConfig.agoraAppId.isEmpty ||
@@ -31,13 +34,10 @@ class LiveService {
     }
     await _requestPermissions();
 
-    final engine = await AgoraRtcEngineImpl.createWithConfig(
-      RtcEngineConfig(appId: AppConfig.agoraAppId),
-    );
-    await engine.initialize();
-
-    // Roles padrao para broadcast (host + audience)
-    await engine.setChannelProfile(ChannelProfileType.channelProfileLiveBroadcasting);
+    final engine = createAgoraRtcEngine();
+    await engine.initialize(RtcEngineContext(appId: AppConfig.agoraAppId));
+    await engine.setChannelProfile(
+        ChannelProfileType.channelProfileLiveBroadcasting);
     await engine.enableVideo();
     await engine.enableAudio();
 
@@ -47,7 +47,7 @@ class LiveService {
   }
 
   Future<void> startHost(String channel) async {
-    await _engine?.setClientRole(ClientRoleType.clientRoleBroadcaster);
+    await _engine?.setClientRole(role: ClientRoleType.clientRoleBroadcaster);
     await _engine?.enableLocalVideo(true);
     await _engine?.enableLocalAudio(true);
     await _engine?.startPreview();
@@ -60,7 +60,7 @@ class LiveService {
   }
 
   Future<void> joinAudience(String channel) async {
-    await _engine?.setClientRole(ClientRoleType.clientRoleAudience);
+    await _engine?.setClientRole(role: ClientRoleType.clientRoleAudience);
     await _engine?.joinChannel(
       token: '',
       channelId: channel,
@@ -69,28 +69,23 @@ class LiveService {
     );
   }
 
-  /// Substitui o video local (host) na tela.
-  Future<void> setupLocalVideo(RtcSurfaceView view, {bool mirror = true}) async {
-    await _engine?.setVideoSource(VideoSourceType.videoSourceCamera);
-    await _engine?.setupLocalVideo(
-      VideoCanvas(
-        view: view,
-        uid: 0,
-        renderMode: VideoRenderMode.VideoRenderFit,
-        mirrorMode: mirror
-            ? VideoMirrorModeType.videoMirrorModeEnabled
-            : VideoMirrorModeType.videoMirrorModeDisabled,
+  /// View local (host) para o AgoraVideoView.
+  AgoraVideoView buildLocalVideoView() {
+    return AgoraVideoView(
+      controller: VideoViewController(
+        rtcEngine: _engine!,
+        canvas: const VideoCanvas(uid: 0),
       ),
     );
   }
 
-  /// Exibe o video remoto de um usuario na tela.
-  Future<void> setupRemoteVideo(int remoteUid, RtcSurfaceView view) async {
-    await _engine?.setupRemoteVideo(
-      VideoCanvas(
-        view: view,
-        uid: remoteUid,
-        renderMode: VideoRenderMode.VideoRenderFit,
+  /// View remota (audiencia) para o AgoraVideoView.
+  AgoraVideoView buildRemoteVideoView(int remoteUid, String channel) {
+    return AgoraVideoView(
+      controller: VideoViewController.remote(
+        rtcEngine: _engine!,
+        canvas: VideoCanvas(uid: remoteUid),
+        connection: RtcConnection(channelId: channel),
       ),
     );
   }
@@ -115,12 +110,14 @@ class LiveService {
     void Function()? onJoined,
     void Function(String message)? onError,
   }) {
-    _engine?.setEventHandler(
+    _engine?.registerEventHandler(
       RtcEngineEventHandler(
-        onJoinChannelSuccess: (channel, uid, elapsed) => onJoined?.call(),
-        onUserJoined: (uid, elapsed) => onUserJoined?.call(uid),
-        onUserOffline: (uid, reason) => onUserOffline?.call(uid),
-        onError: (code, message) => onError?.call('$code: $message'),
+        onJoinChannelSuccess: (connection, elapsed) => onJoined?.call(),
+        onUserJoined: (connection, remoteUid, elapsed) =>
+            onUserJoined?.call(remoteUid),
+        onUserOffline: (connection, remoteUid, reason) =>
+            onUserOffline?.call(remoteUid),
+        onError: (err, msg) => onError?.call('$err: $msg'),
       ),
     );
   }

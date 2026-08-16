@@ -32,8 +32,6 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
   Duration _elapsed = Duration.zero;
   final _chatController = TextEditingController();
   int _remoteUid = 0;
-  RtcSurfaceView? _localView;
-  RtcSurfaceView? _remoteView;
   bool _agoraReady = false;
   String? _agoraWarning;
 
@@ -58,20 +56,11 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
       });
       return;
     }
-    final uid = ref.read(authStateProvider).value;
-    _localView = RtcSurfaceView();
-    _remoteView = RtcSurfaceView();
     setState(() => _agoraReady = true);
 
     liveService.listen(
-      onJoined: () {
-        if (widget.isHost) {
-          liveService.setupLocalVideo(_localView!);
-        }
-      },
       onUserJoined: (remoteUid) {
         setState(() => _remoteUid = remoteUid);
-        liveService.setupRemoteVideo(remoteUid, _remoteView!);
       },
       onUserOffline: (uid) {
         if (uid == _remoteUid) setState(() => _remoteUid = 0);
@@ -94,7 +83,8 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
           .collection('lives')
           .doc(widget.room.id)
           .get();
-      final current = (snap.data()?['viewers'] as num?)?.toInt() ?? 0;
+      final current =
+          ((snap.data() as Map?)?['viewers'] as num?)?.toInt() ?? 0;
       await db.bumpLiveViewers(widget.room.id, current + 1);
     } catch (_) {}
   }
@@ -245,11 +235,14 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
   }
 
   Widget _buildVideoArea() {
-    if (_agoraReady && widget.isHost && _localView != null) {
-      return _localView!;
+    final liveService = ref.read(liveServiceProvider);
+    if (_agoraReady && widget.isHost && liveService.engine != null) {
+      return liveService.buildLocalVideoView();
     }
-    if (_agoraReady && !widget.isHost && _remoteView != null) {
-      return _remoteView!;
+    if (_agoraReady && !widget.isHost &&
+        _remoteUid != 0 &&
+        liveService.engine != null) {
+      return liveService.buildRemoteVideoView(_remoteUid, widget.room.channel);
     }
     // Demonstracao: gradiente no lugar da camera
     return Container(

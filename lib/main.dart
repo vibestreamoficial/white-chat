@@ -16,7 +16,7 @@ Future<void> main() async {
   // Inicializa o Firebase. Se as credenciais ainda nao foram configuradas
   // (firebase_options.dart + google-services.json), o app abre uma tela
   // de aviso mostrando o passo a passo.
-  Firebase? firebase;
+  FirebaseApp? firebase;
   String? firebaseError;
   try {
     firebase = await Firebase.initializeApp(

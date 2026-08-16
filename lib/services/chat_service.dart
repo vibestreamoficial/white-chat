@@ -24,7 +24,7 @@ class ChatService {
         .limit(50)
         .get();
     for (final d in q.docs) {
-      final members = (d.data()['members'] as List?) ?? [];
+      final members = ((d.data() as Map?)?['members'] as List?) ?? [];
       if (members.contains(otherUid)) {
         return d.id;
       }
@@ -123,7 +123,7 @@ class ChatService {
   Stream<DateTime?> streamLastSeen(String uid) {
     return _db.collection('profiles').doc(uid).snapshots().map((snap) {
       if (!snap.exists) return null;
-      return tsToDateTime(snap.data()?['lastSeen']);
+      return tsToDateTime((snap.data() as Map?)?['lastSeen']);
     });
   }
 
