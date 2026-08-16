@@ -1,7 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-import '../firebase_options.dart';
-
 import '../models/chat.dart';
 import '../models/live.dart';
 import '../models/notification_item.dart';
@@ -11,16 +9,7 @@ import '../models/user_profile.dart';
 /// Camada de dados sociais no Cloud Firestore:
 /// profiles, posts, likes, follows, comments, notifications, lives, conversations.
 class DatabaseService {
-  FirebaseFirestore? _dbInstance;
-
-  bool get _demoMode => !DefaultFirebaseOptions.configured;
-
-  FirebaseFirestore get _db {
-    if (_demoMode) {
-      throw StateError('Firebase nao configurado (modo demonstracao).');
-    }
-    return _dbInstance ??= FirebaseFirestore.instance;
-  }
+  final FirebaseFirestore _db = FirebaseFirestore.instance;
 
 /// Converte o snapshot em Map (compativel com cloud_firestore 5.x e 6.x).
 Map<String, dynamic> _snapData(dynamic snap) =>
@@ -28,14 +17,12 @@ Map<String, dynamic> _snapData(dynamic snap) =>
 
   // ---------------------------------------------------------------- perfis
   Future<UserProfile?> getProfile(String uid) async {
-    if (_demoMode) return null;
     final snap = await _db.collection('profiles').doc(uid).get();
     if (!snap.exists) return null;
     return UserProfile.fromMap(uid, _snapData(snap));
   }
 
   Stream<UserProfile?> streamProfile(String uid) {
-    if (_demoMode) return Stream.value(null);
     return _db.collection('profiles').doc(uid).snapshots().map((snap) {
       if (!snap.exists) return null;
       return UserProfile.fromMap(uid, _snapData(snap));
@@ -43,12 +30,10 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Future<void> saveProfile(UserProfile profile) {
-    if (_demoMode) return;
     return _db.collection('profiles').doc(profile.uid).set(profile.toMap());
   }
 
   Future<UserProfile?> getProfileByUsername(String username) async {
-    if (_demoMode) return null;
     final q = await _db
         .collection('profiles')
         .where('username', isEqualTo: username)
@@ -60,7 +45,6 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Future<bool> usernameTaken(String username, String selfUid) async {
-    if (_demoMode) return false;
     final q = await _db
         .collection('profiles')
         .where('username', isEqualTo: username)
@@ -72,12 +56,10 @@ Map<String, dynamic> _snapData(dynamic snap) =>
 
   // ----------------------------------------------------------------- posts
   Future<void> createPost(VideoPost post) {
-    if (_demoMode) return;
     return _db.collection('posts').doc(post.id).set(post.toMap());
   }
 
   Stream<List<VideoPost>> streamFeed({bool onlyFollowing = false, List<String>? followingUids}) {
-    if (_demoMode) return Stream.value(_samplePosts());
     Query query = _db
         .collection('posts')
         .where('status', isEqualTo: 'aprovado')
@@ -92,7 +74,6 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Stream<List<VideoPost>> streamUserPosts(String uid) {
-    if (_demoMode) return Stream.value(_samplePosts());
     return _db
         .collection('posts')
         .where('authorUid', isEqualTo: uid)
@@ -104,17 +85,14 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Future<void> updatePost(String postId, Map<String, dynamic> data) {
-    if (_demoMode) return;
     return _db.collection('posts').doc(postId).update(data);
   }
 
   Future<void> deletePost(String postId) {
-    if (_demoMode) return;
     return _db.collection('posts').doc(postId).delete();
   }
 
   Stream<List<VideoPost>> streamModerationQueue() {
-    if (_demoMode) return Stream.value([]);
     return _db
         .collection('posts')
         .where('status', isEqualTo: 'pendente')
@@ -125,13 +103,11 @@ Map<String, dynamic> _snapData(dynamic snap) =>
 
   // -------------------------------------------------------------- likes
   Future<bool> isLiked(String postId, String uid) async {
-    if (_demoMode) return false;
     final snap = await _db.collection('postLikes').doc('${postId}_$uid').get();
     return snap.exists;
   }
 
   Future<void> toggleLike(VideoPost post, String uid) async {
-    if (_demoMode) return;
     final doc = _db.collection('postLikes').doc('${post.id}_$uid');
     final snap = await doc.get();
     if (snap.exists) {
@@ -145,7 +121,6 @@ Map<String, dynamic> _snapData(dynamic snap) =>
 
   // ------------------------------------------------------------ follows
   Stream<List<UserProfile>> streamFollowing(String uid) {
-    if (_demoMode) return Stream.value([]);
     return _db
         .collection('follows')
         .where('followerUid', isEqualTo: uid)
@@ -163,7 +138,6 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Stream<List<String>> streamFollowingUids(String uid) {
-    if (_demoMode) return Stream.value([]);
     return _db
         .collection('follows')
         .where('followerUid', isEqualTo: uid)
@@ -172,13 +146,11 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Future<bool> isFollowing(String targetUid, String uid) async {
-    if (_demoMode) return false;
     final snap = await _db.collection('follows').doc('${uid}_$targetUid').get();
     return snap.exists;
   }
 
   Future<void> toggleFollow(UserProfile target, UserProfile me, String myUid) async {
-    if (_demoMode) return;
     final doc = _db.collection('follows').doc('${myUid}_${target.uid}');
     final snap = await doc.get();
     if (snap.exists) {
@@ -221,7 +193,6 @@ Map<String, dynamic> _snapData(dynamic snap) =>
 
   // ------------------------------------------------------------- comments
   Future<void> addComment(String postId, String uid, String userName, String text) {
-    if (_demoMode) return;
     final id = _db.collection('comments').doc().id;
     return _db.collection('comments').doc(id).set({
       'postId': postId,
@@ -233,7 +204,6 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Stream<List<Map<String, dynamic>>> streamComments(String postId) {
-    if (_demoMode) return Stream.value([]);
     return _db
         .collection('comments')
         .where('postId', isEqualTo: postId)
@@ -248,12 +218,10 @@ Map<String, dynamic> _snapData(dynamic snap) =>
 
   // -------------------------------------------------------- notifications
   Future<void> addNotification(AppNotification n) {
-    if (_demoMode) return;
     return _db.collection('notifications').doc(n.id).set(n.toMap());
   }
 
   Stream<List<AppNotification>> streamNotifications(String uid) {
-    if (_demoMode) return Stream.value([]);
     return _db
         .collection('notifications')
         .where('toUid', isEqualTo: uid)
@@ -266,18 +234,15 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Future<void> markNotificationRead(String id) {
-    if (_demoMode) return;
     return _db.collection('notifications').doc(id).update({'read': true});
   }
 
   // ----------------------------------------------------------------- lives
   Future<void> createLive(LiveRoom room) {
-    if (_demoMode) return;
     return _db.collection('lives').doc(room.id).set(room.toMap());
   }
 
   Stream<List<LiveRoom>> streamLives() {
-    if (_demoMode) return Stream.value([]);
     return _db
         .collection('lives')
         .where('active', isEqualTo: true)
@@ -287,18 +252,15 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Future<void> endLive(String id) {
-    if (_demoMode) return;
     return _db.collection('lives').doc(id).update({'active': false});
   }
 
   Future<void> bumpLiveViewers(String id, int viewers) {
-    if (_demoMode) return;
     return _db.collection('lives').doc(id).update({'viewers': viewers});
   }
 
   // --------------------------------------------------------- conversations
   Stream<List<Conversation>> streamConversations(String uid) {
-    if (_demoMode) return Stream.value([]);
     return _db
         .collection('conversations')
         .where('members', arrayContains: uid)
@@ -314,55 +276,5 @@ Map<String, dynamic> _snapData(dynamic snap) =>
               m['otherUid'] = otherUid;
               return Conversation.fromMap(d.id, m);
             }).toList());
-  }
-
-  /// Posts de exemplo exibidos no feed em modo demonstracao (sem Firebase).
-  List<VideoPost> _samplePosts() {
-    final agora = DateTime.now();
-    return [
-      VideoPost(
-        id: 'demo1',
-        authorUid: 'demo_whitechat',
-        authorName: 'WHITE CHAT',
-        authorUsername: 'whitechat',
-        caption: 'Bem-vindo ao WHITE CHAT 🎉 #demo #kwai',
-        music: 'som demo',
-        likes: 128,
-        comments: 12,
-        shares: 5,
-        views: 3400,
-        status: 'aprovado',
-        createdAt: agora,
-      ),
-      VideoPost(
-        id: 'demo2',
-        authorUid: 'demo_whitechat',
-        authorName: 'WHITE CHAT',
-        authorUsername: 'whitechat',
-        caption: 'Modo demonstracao: login local ativo 🔒 #demo',
-        music: 'som demo 2',
-        likes: 89,
-        comments: 7,
-        shares: 3,
-        views: 2100,
-        status: 'aprovado',
-        createdAt: agora.subtract(const Duration(hours: 1)),
-      ),
-      VideoPost(
-        id: 'demo3',
-        authorUid: 'demo_whitechat',
-        authorName: 'WHITE CHAT',
-        authorUsername: 'whitechat',
-        caption: 'Configure o Firebase para postar e conversar 💬 #demo',
-        music: 'som demo 3',
-        isLive: true,
-        likes: 210,
-        comments: 20,
-        shares: 9,
-        views: 5600,
-        status: 'aprovado',
-        createdAt: agora.subtract(const Duration(hours: 2)),
-      ),
-    ];
   }
 }
