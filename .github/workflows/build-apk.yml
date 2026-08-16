@@ -42,7 +42,7 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Criar google-services.json a partir do secret (se existir)
+      - name: Criar google-services.json (secret ou firebase_config/)
         shell: bash
         env:
           GS_JSON: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}
@@ -57,12 +57,11 @@ jobs:
           for frag in ['{', '}', 'project_info', 'AIza', 'client', 'package_name', 'http', 'base64', 'json']:
               print('DIAG contem_' + frag.replace('{','chave_abre').replace('}','chave_fecha').replace('.','_') + ':', frag in v)
           DIAG
-            python3 - <<'PYEOF' || exit 1
-          import base64, json, os
+            python3 - <<'PYEOF' || echo "::warning::secret FIREBASE_GOOGLE_SERVICES_JSON nao e JSON/base64 valido"
+          import base64, json
           path = 'android/app/google-services.json'
           raw = open(path, 'rb').read()
           text = raw.decode('utf-8', 'replace').strip()
-          # Remove cercas de markdown (```json ... ```) e aspas externas
           if text.startswith('```'):
               text = text.split('\n', 1)[-1].rsplit('```', 1)[0].strip()
           if (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
@@ -75,25 +74,26 @@ jobs:
               except Exception:
                   pass
           else:
-              # Tenta base64 (alguns tutoriais mandam codificar o arquivo)
               try:
                   dec = base64.b64decode(text + '=' * (-len(text) % 4)).decode('utf-8')
                   candidates.append(('base64', json.loads(dec)))
               except Exception:
                   pass
           if not candidates:
-              head = repr(text[:120])
-              print('::error::O secret FIREBASE_GOOGLE_SERVICES_JSON nao e o JSON puro. Inicio do valor: ' + head)
-              print('::error::Cole o conteudo INTEIRO do google-services.json (comeca com { e termina com }).')
               raise SystemExit(1)
           label, data = candidates[0]
           open(path, 'w').write(json.dumps(data, indent=2))
           print(f'google-services.json criado a partir do secret ({label}).')
           PYEOF
-            echo "google-services.json criado."
-          else
-            echo "::warning::Sem secret FIREBASE_GOOGLE_SERVICES_JSON. O APK sai em modo demonstracao."
           fi
+          # Fallback: arquivo firebase_config/google-services.json enviado para o repo
+          if ! python3 -c "import json;json.load(open('android/app/google-services.json'))" 2>/dev/null && [ -f firebase_config/google-services.json ]; then
+            cp firebase_config/google-services.json android/app/google-services.json
+            echo "Usando firebase_config/google-services.json do repositorio."
+          fi
+          python3 -c "import json;json.load(open('android/app/google-services.json'))" \
+            || { echo "::error::Sem google-services.json valido. Cole o conteudo INTEIRO do arquivo no secret (comeca com { e termina com }) ou envie o arquivo para firebase_config/ no repo."; exit 1; }
+          echo "google-services.json OK."
 
       - name: Validar google-services.json (evita APK com API key invalida)
         if: hashFiles('android/app/google-services.json') != ''
