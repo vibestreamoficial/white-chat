@@ -1,0 +1,103 @@
+name: Build APK (WHITE CHAT)
+
+# Gera o APK debug e o APK release assinado em nuvem (GitHub Actions),
+# sem precisar instalar Flutter na sua maquina. Depois do build, os APKs
+# ficam disponiveis em Actions > (este workflow) > Artifacts.
+#
+# ANTES DE USAR:
+#  1. Crie o projeto Firebase e baixe o android/app/google-services.json
+#  2. No GitHub: Settings > Secrets and variables > Actions > New secret
+#     Nome:  FIREBASE_GOOGLE_SERVICES_JSON
+#     Valor: o conteudo inteiro do seu google-services.json
+#  3. Rode o workflow na aba Actions (ou em todo push na branch main)
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Criar google-services.json a partir do secret (se existir)
+        shell: bash
+        run: |
+          if [ -n "${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}" ]; then
+            echo "${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}" > android/app/google-services.json
+            python3 -c "import json;json.load(open('android/app/google-services.json'))" \
+              || { echo "::error::google-services.json invalido (JSON mal formatado)."; exit 1; }
+            echo "google-services.json criado a partir do secret."
+          else
+            echo "::warning::Sem secret FIREBASE_GOOGLE_SERVICES_JSON. O APK sai em modo demonstracao."
+          fi
+
+      - name: Preencher chaves do Firebase em lib/firebase_options.dart (se houver json)
+        if: hashFiles('android/app/google-services.json') != ''
+        shell: bash
+        run: |
+          python3 - <<'EOF'
+          import json
+          data = json.load(open('android/app/google-services.json'))
+          client = next(c for c in data['client'] if 'android_client_info' in c)
+          api_key = next(k['current_key'] for k in client['api_key'])
+          app_id = client['client_info']['mobilesdk_app_id']
+          project_id = data['project_info']['project_id']
+          storage = data['project_info']['storage_bucket']
+          sender = data['project_info']['project_number']
+          db_url = f"https://{project_id}-default-rtdb.firebaseio.com"
+          content = f"""import 'package:firebase_core/firebase_core.dart';
+
+// Gerado automaticamente pelo workflow (build-apk.yml) a partir do
+// google-services.json. Rode 'flutterfire configure' para regenerar.
+class DefaultFirebaseOptions {{
+  DefaultFirebaseOptions._();
+
+  static const FirebaseOptions initial = FirebaseOptions(
+    apiKey: '{api_key}',
+    appId: '{app_id}',
+    messagingSenderId: '{sender}',
+    projectId: '{project_id}',
+    storageBucket: '{storage}',
+    databaseURL: '{db_url}',
+  );
+}}
+"""
+          open('lib/firebase_options.dart', 'w').write(content)
+          print('firebase_options.dart atualizado')
+          EOF
+
+      - name: flutter pub get
+        run: flutter pub get
+
+      - name: Build APK debug
+        run: flutter build apk --debug
+
+      - name: Build APK release assinado
+        run: flutter build apk --release
+
+      - name: Build APKs por ABI (menores)
+        run: flutter build apk --release --split-per-abi
+
+      - name: Upload dos APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: white-chat-apks
+          path: |
+            build/app/outputs/flutter-apk/*.apk
+          retention-days: 30
