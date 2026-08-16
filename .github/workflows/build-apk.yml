@@ -21,6 +21,17 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Liberar espaco em disco (manter Android SDK)
+        uses: jlumbroso/free-disk-space@main
+        with:
+          tool-cache: true
+          dotnet: true
+          haskell: true
+          large-packages: true
+          docker-images: true
+          swap-storage: true
+          android: false
+
       - name: Setup Flutter
         uses: subosito/flutter-action@v2
         with:
