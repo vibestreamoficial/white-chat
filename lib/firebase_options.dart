@@ -1,28 +1,30 @@
 import 'package:firebase_core/firebase_core.dart';
 
-// IMPORTANTE: arquivo de opcoes do Firebase.
+// Gerado automaticamente (nao edite a mao).
 //
-// A forma mais facil de gerar este arquivo:
-//   1) Crie o projeto no console Firebase (https://console.firebase.google.com)
-//      com o pacote do app: com.whitechat.app
-//   2) Adicione um app Android (informe o SHA-1 da assinatura de release)
-//   3) Rode na pasta do projeto:
-//        dart pub global activate flutterfire_cli
-//        flutterfire configure
-//   4) O flutterfire_cli gera este arquivo e o android/app/google-services.json
+// configured=false: o google-services.json ainda nao foi adicionado ao
+// projeto. O app abre normalmente no login e avisa com um SnackBar.
 //
-// Se preferir manual: copie os valores do seu google-services.json para as
-// constantes abaixo e baixe o google-services.json para android/app/.
+// Para ativar o Firebase de verdade:
+//   1) Baixe o google-services.json do seu projeto Firebase
+//      (app Android com pacote com.whitechat.app)
+//   2) Coloque o arquivo na pasta firebase_config/
+//   3) Rode: bash firebase_config/ativar_firebase.sh
+//
+// O script copia o arquivo para android/app/, gera este arquivo com as
+// chaves reais e recompila o APK.
 class DefaultFirebaseOptions {
   DefaultFirebaseOptions._();
 
+  /// true quando o Firebase real foi configurado.
+  static const bool configured = false;
+
   static const FirebaseOptions initial = FirebaseOptions(
-    apiKey: 'SUA_API_KEY',
-    appId: 'SEU_APP_ID',
-    messagingSenderId: 'SEU_SENDER_ID',
-    projectId: 'SEU_PROJECT_ID',
-    storageBucket: 'SEU_PROJECT_ID.appspot.com',
-    // Necessario para o chat em tempo real:
-    databaseURL: 'https://SEU_PROJECT_ID-default-rtdb.firebaseio.com',
+    apiKey: '',
+    appId: '',
+    messagingSenderId: '',
+    projectId: '',
+    storageBucket: '',
+    databaseURL: '',
   );
 }

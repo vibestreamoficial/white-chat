@@ -13,24 +13,23 @@ import 'theme/app_theme.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Inicializa o Firebase. Se as credenciais ainda nao foram configuradas
-  // (firebase_options.dart + google-services.json), o app abre uma tela
-  // de aviso mostrando o passo a passo.
+  // Inicializa o Firebase somente quando o google-services.json foi
+  // configurado (firebase_config/ativar_firebase.sh). Se faltar, o app
+  // abre normal no login e avisa via SnackBar — nunca trava em tela preta.
   FirebaseApp? firebase;
   String? firebaseError;
-  try {
-    firebase = await Firebase.initializeApp(
-      options: DefaultFirebaseOptions.initial,
-    );
-    // Chaves ainda sao placeholder (Firebase nunca foi configurado):
-    // nao deixa o login estourar com "API key not valid" nem erro 10
-    // do Google Sign-In. Mostra a tela de passo a passo no lugar.
-    if (_isPlaceholderConfig(DefaultFirebaseOptions.initial)) {
-      firebase = null;
-      firebaseError = 'Firebase ainda nao configurado (chaves placeholder).';
+  if (DefaultFirebaseOptions.configured) {
+    try {
+      firebase = await Firebase.initializeApp(
+        options: DefaultFirebaseOptions.initial,
+      );
+    } catch (e) {
+      firebaseError = e.toString();
     }
-  } catch (e) {
-    firebaseError = e.toString();
+  } else {
+    firebaseError =
+        'google-services.json nao encontrado. Coloque o arquivo na pasta '
+        'firebase_config/ e rode: bash firebase_config/ativar_firebase.sh';
   }
 
   if (firebase != null) {
@@ -41,23 +40,15 @@ Future<void> main() async {
 
   runApp(
     ProviderScope(
-      child: WhiteChatApp(
-        firebaseReady: firebase != null,
-        firebaseError: firebaseError,
-      ),
+      child: WhiteChatApp(firebaseError: firebaseError),
     ),
   );
 }
 
 class WhiteChatApp extends ConsumerWidget {
-  final bool firebaseReady;
   final String? firebaseError;
 
-  const WhiteChatApp({
-    super.key,
-    required this.firebaseReady,
-    this.firebaseError,
-  });
+  const WhiteChatApp({super.key, this.firebaseError});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -66,105 +57,59 @@ class WhiteChatApp extends ConsumerWidget {
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light(),
       darkTheme: AppTheme.dark(),
-      home: _Root(firebaseReady: firebaseReady, firebaseError: firebaseError),
+      home: _Root(firebaseError: firebaseError),
     );
   }
 }
 
-class _Root extends ConsumerWidget {
-  final bool firebaseReady;
+/// Raiz do app: abre direto na tela de login do WHITE CHAT.
+/// Se o Firebase nao estiver configurado, avisa uma unica vez com SnackBar.
+class _Root extends ConsumerStatefulWidget {
   final String? firebaseError;
 
-  const _Root({required this.firebaseReady, this.firebaseError});
+  const _Root({this.firebaseError});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    if (!firebaseReady) {
-      return _FirebaseSetupScreen(error: firebaseError);
-    }
+  ConsumerState<_Root> createState() => _RootState();
+}
 
+class _RootState extends ConsumerState<_Root> {
+  bool _avisou = false;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.firebaseError != null && widget.firebaseError!.isNotEmpty) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted || _avisou) return;
+        _avisou = true;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(widget.firebaseError!),
+            backgroundColor: AppColors.pink,
+            behavior: SnackBarBehavior.floating,
+            duration: const Duration(seconds: 6),
+          ),
+        );
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Com ou sem Firebase configurado, o app abre direto no login.
     final authState = ref.watch(authStateProvider);
     return authState.when(
       loading: () => const Scaffold(
         body: Center(child: CircularProgressIndicator(color: AppColors.pink)),
       ),
-      error: (e, _) => _FirebaseSetupScreen(error: e.toString()),
+      error: (e, _) => const LoginScreen(),
       data: (uid) {
         if (uid == null) {
           return const LoginScreen();
         }
         return const ShellScreen();
       },
-    );
-  }
-}
-
-/// True quando lib/firebase_options.dart ainda contem os valores de exemplo
-/// (o projeto so passa a usar o Firebase real depois que o google-services.json
-/// e fornecido e o app e recompilado).
-bool _isPlaceholderConfig(FirebaseOptions opts) {
-  return opts.apiKey.contains('SUA_') ||
-      opts.appId.contains('SEU_') ||
-      opts.messagingSenderId.contains('SEU_') ||
-      opts.projectId.contains('SEU_');
-}
-
-/// Tela exibida quando o Firebase ainda nao foi configurado.
-class _FirebaseSetupScreen extends StatelessWidget {
-  final String? error;
-
-  const _FirebaseSetupScreen({this.error});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFF0A0A0A),
-      body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.warning_amber_rounded,
-                    color: AppColors.pink, size: 72),
-                const SizedBox(height: 16),
-                Text(
-                  AppConfig.appName,
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 28,
-                    fontWeight: FontWeight.w800,
-                    fontFamily: 'Roboto',
-                  ),
-                ),
-                const SizedBox(height: 8),
-                const Text(
-                  'Falta conectar o Firebase para o app funcionar.\n\n'
-                  '1. Crie um projeto em console.firebase.google.com\n'
-                  '2. Adicione um app Android com pacote: com.whitechat.app\n'
-                  '3. Ative Authentication: E-mail/Senha, Google e Telefone\n'
-                  '4. Baixe o google-services.json e envie para a administracao\n'
-                  '5. O app e recompilado automaticamente com as chaves\n\n'
-                  'O arquivo tambem corrige o erro 10 do Google Sign-In.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white70, height: 1.6),
-                ),
-                if (error != null && error!.isNotEmpty) ...[
-                  const SizedBox(height: 16),
-                  Text(
-                    'Erro: $error',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(color: Colors.redAccent, fontSize: 12),
-                  ),
-                ],
-                const SizedBox(height: 24),
-                const Icon(Icons.rocket_launch, color: AppColors.pink, size: 40),
-              ],
-            ),
-          ),
-        ),
-      ),
     );
   }
 }

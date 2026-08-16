@@ -162,6 +162,23 @@ Sem o secret, o workflow ainda gera os APKs (modo demonstração). Com o
 secret, ele preenche sozinho o `lib/firebase_options.dart`, roda
 `flutter pub get` e gera os APKs debug, release assinado e por ABI.
 
+
+## 6.3) Ativar Firebase com 1 comando (sem placeholder)
+
+1. Baixe o `google-services.json` do Firebase Console (app Android
+   `com.whitechat.app`).
+2. Coloque o arquivo em `firebase_config/google-services.json`.
+3. Rode:
+   ```bash
+   bash firebase_config/ativar_firebase.sh
+   ```
+O script copia o arquivo para `android/app/`, gera as chaves reais em
+`lib/firebase_options.dart` e recompila o APK. Sem o arquivo, o app abre
+direto no login (fundo branco) e mostra um SnackBar avisando — sem tela
+preta. Para o erro 10 do Google Sign-In, rode
+`bash firebase_config/fingerprints.sh` e cadastre as SHA-1/SHA-256 no
+Firebase Console.
+
 ## 7) Moderação de posts
 Posts novos entram como **Pendente** e só aparecem no feed após aprovação.
 Para aprovar, atualize o campo `status` do documento em `posts/` para

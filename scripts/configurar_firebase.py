@@ -59,6 +59,8 @@ def main():
 class DefaultFirebaseOptions {{
   DefaultFirebaseOptions._();
 
+  static const bool configured = true;
+
   static const FirebaseOptions initial = FirebaseOptions(
     apiKey: '{api_key}',
     appId: '{app_id}',

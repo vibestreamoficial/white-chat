@@ -13,6 +13,8 @@ android/app/google-services.json
 *.jks
 !whitechat-release.jks
 
+firebase_config/google-services.json
+
 # IDE
 .idea/
 *.iml
