@@ -174,8 +174,9 @@ secret, ele preenche sozinho o `lib/firebase_options.dart`, roda
    ```
 O script copia o arquivo para `android/app/`, gera as chaves reais em
 `lib/firebase_options.dart` e recompila o APK. Sem o arquivo, o app abre
-direto no login (fundo branco) e mostra um SnackBar avisando — sem tela
-preta. Para o erro 10 do Google Sign-In, rode
+direto no login (fundo branco) em **modo demonstração**: entre com
+qualquer e-mail/senha (ou no botão do Google) e navegue pelo app com
+conteúdo de exemplo — nada é enviado para a internet. Para o erro 10 do Google Sign-In, rode
 `bash firebase_config/fingerprints.sh` e cadastre as SHA-1/SHA-256 no
 Firebase Console.
 

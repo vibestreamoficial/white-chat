@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_database/firebase_database.dart';
 
+import '../firebase_options.dart';
 import '../models/chat.dart';
 import '../utils/time_utils.dart';
 
@@ -13,11 +14,28 @@ import '../utils/time_utils.dart';
 ///   messages/{convId}/{msgId} -> mensagens no RTDB
 ///   typing/{convId}/{uid}   -> status de digitando
 class ChatService {
-  final FirebaseDatabase _rtdb = FirebaseDatabase.instance;
-  final FirebaseFirestore _db = FirebaseFirestore.instance;
+  FirebaseDatabase? _rtdbInstance;
+  FirebaseFirestore? _dbInstance;
+
+  bool get _demoMode => !DefaultFirebaseOptions.configured;
+
+  FirebaseDatabase get _rtdb {
+    if (_demoMode) {
+      throw StateError('Firebase nao configurado (modo demonstracao).');
+    }
+    return _rtdbInstance ??= FirebaseDatabase.instance;
+  }
+
+  FirebaseFirestore get _db {
+    if (_demoMode) {
+      throw StateError('Firebase nao configurado (modo demonstracao).');
+    }
+    return _dbInstance ??= FirebaseFirestore.instance;
+  }
 
   /// Cria (ou reutiliza) a conversa entre dois usuarios.
   Future<String> openConversation(String myUid, String otherUid) async {
+    if (_demoMode) return 'demo_conversation';
     final q = await _db
         .collection('conversations')
         .where('members', arrayContains: myUid)
@@ -51,6 +69,7 @@ class ChatService {
 
   /// Stream de mensagens da conversa em tempo real.
   Stream<List<ChatMessage>> streamMessages(String convId) {
+    if (_demoMode) return Stream.value([]);
     return _messagesRef(convId)
         .orderByChild('sentAt')
         .onValue
@@ -70,6 +89,7 @@ class ChatService {
   }
 
   Future<void> sendText(String convId, String senderUid, String text) async {
+    if (_demoMode) return;
     final msgId = _messagesRef(convId).push().key ?? DateTime.now().microsecondsSinceEpoch.toString();
     final msg = ChatMessage(
       id: msgId,
@@ -84,6 +104,7 @@ class ChatService {
   }
 
   Future<void> sendMedia(String convId, String senderUid, String type, String url) async {
+    if (_demoMode) return;
     final msgId = _messagesRef(convId).push().key ?? DateTime.now().microsecondsSinceEpoch.toString();
     final msg = ChatMessage(
       id: msgId,
@@ -98,6 +119,7 @@ class ChatService {
   }
 
   Future<void> _updateConversationMeta(String convId, String preview, String type) async {
+    if (_demoMode) return;
     await _db.collection('conversations').doc(convId).update({
       'lastMessage': preview,
       'lastMessageType': type,
@@ -110,10 +132,12 @@ class ChatService {
       _rtdb.ref('typing').child(convId).child(uid);
 
   Future<void> setTyping(String convId, String uid, bool typing) {
+    if (_demoMode) return;
     return _typingRef(convId, uid).set(typing);
   }
 
   Stream<bool> streamTyping(String convId, String otherUid) {
+    if (_demoMode) return Stream.value(false);
     return _typingRef(convId, otherUid).onValue.map((event) {
       return event.snapshot.value == true;
     });
@@ -121,6 +145,7 @@ class ChatService {
 
   /// Ultima vez online do usuario (Firestore field `lastSeen`).
   Stream<DateTime?> streamLastSeen(String uid) {
+    if (_demoMode) return Stream.value(null);
     return _db.collection('profiles').doc(uid).snapshots().map((snap) {
       if (!snap.exists) return null;
       return tsToDateTime((snap.data() as Map?)?['lastSeen']);
@@ -128,6 +153,7 @@ class ChatService {
   }
 
   Future<void> touchLastSeen(String uid) {
+    if (_demoMode) return;
     return _db.collection('profiles').doc(uid).update({'lastSeen': DateTime.now()});
   }
 }

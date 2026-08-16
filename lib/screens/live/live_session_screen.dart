@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../config.dart';
+import '../../firebase_options.dart';
 import '../../models/gift.dart';
 import '../../models/live.dart';
 import '../../state/providers.dart';
@@ -38,6 +39,21 @@ class _LiveSessionScreenState extends ConsumerState<LiveSessionScreen> {
   @override
   void initState() {
     super.initState();
+    // Sem Firebase (modo demonstracao) a sessao de live nao abre: evita
+    // crash no chat em tempo real que depende do Realtime Database.
+    if (!DefaultFirebaseOptions.configured) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+                'Lives disponiveis somente com o Firebase configurado.'),
+          ),
+        );
+        Navigator.of(context).pop();
+      });
+      return;
+    }
     _timer = Timer.periodic(const Duration(seconds: 1), (_) {
       if (mounted) setState(() => _elapsed += const Duration(seconds: 1));
     });

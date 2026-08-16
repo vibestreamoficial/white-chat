@@ -1,7 +1,7 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../models/app_user.dart';
 import '../../services/auth_service.dart';
 import '../../services/database_service.dart';
 import '../../state/providers.dart';
@@ -67,7 +67,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     });
     try {
       final auth = ref.read(authServiceProvider);
-      UserCredential cred;
+      AppCredential cred;
       try {
         cred = await auth.signInWithEmail(_emailController.text, _passwordController.text);
       } catch (_) {

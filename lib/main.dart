@@ -28,8 +28,8 @@ Future<void> main() async {
     }
   } else {
     firebaseError =
-        'google-services.json nao encontrado. Coloque o arquivo na pasta '
-        'firebase_config/ e rode: bash firebase_config/ativar_firebase.sh';
+        'Modo demonstracao ativo: login local com qualquer e-mail/senha. '
+        'Para dados reais, configure o Firebase (firebase_config/).';
   }
 
   if (firebase != null) {

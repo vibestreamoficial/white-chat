@@ -1,11 +1,23 @@
 import 'dart:io';
 import 'dart:typed_data';
 
-import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_storage/firebase_firebaseStorage.dart';
+
+import '../firebase_options.dart';
 
 /// Upload de midia (video, foto, avatar) para o Firebase Storage.
 class StorageService {
-  final FirebaseStorage _storage = FirebaseStorage.instance;
+  FirebaseStorage? _storage;
+
+  bool get _demoMode => !DefaultFirebaseOptions.configured;
+
+  FirebaseStorage get _firebaseStorage {
+    if (_demoMode) {
+      throw StateError(
+          'Upload de midia disponivel somente com o Firebase configurado.');
+    }
+    return _storage ??= FirebaseStorage.instance;
+  }
 
   Future<String> uploadFile({
     required File file,
@@ -15,7 +27,7 @@ class StorageService {
   }) async {
     final safe = uid ?? 'anon';
     final name = '${DateTime.now().millisecondsSinceEpoch}.$ext';
-    final ref = _storage.ref().child('$folder/$safe/$name');
+    final ref = _firebaseStorage.ref().child('$folder/$safe/$name');
     final task = ref.putFile(file);
     await task;
     return ref.getDownloadURL();
@@ -29,7 +41,7 @@ class StorageService {
   }) async {
     final safe = uid ?? 'anon';
     final name = '${DateTime.now().millisecondsSinceEpoch}.$ext';
-    final ref = _storage.ref().child('$folder/$safe/$name');
+    final ref = _firebaseStorage.ref().child('$folder/$safe/$name');
     await ref.putData(Uint8List.fromList(bytes));
     return ref.getDownloadURL();
   }
