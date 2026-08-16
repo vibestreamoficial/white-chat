@@ -17,3 +17,7 @@ android/app/google-services.json
 .idea/
 *.iml
 .vscode/
+
+# Segredos de assinatura (nao vao para o GitHub)
+android/key.properties
+whitechat-release.jks
