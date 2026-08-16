@@ -36,7 +36,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _ensureProfile(AppUser user) async {
+  Future<void> _ensureProfile(User user) async {
     final db = ref.read(databaseServiceProvider);
     final existing = await db.getProfile(user.uid);
     if (existing == null) {

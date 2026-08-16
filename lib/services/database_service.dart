@@ -43,7 +43,7 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Future<void> saveProfile(UserProfile profile) {
-    if (_demoMode) return Future.value();
+    if (_demoMode) return;
     return _db.collection('profiles').doc(profile.uid).set(profile.toMap());
   }
 
@@ -72,7 +72,7 @@ Map<String, dynamic> _snapData(dynamic snap) =>
 
   // ----------------------------------------------------------------- posts
   Future<void> createPost(VideoPost post) {
-    if (_demoMode) return Future.value();
+    if (_demoMode) return;
     return _db.collection('posts').doc(post.id).set(post.toMap());
   }
 
@@ -104,12 +104,12 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Future<void> updatePost(String postId, Map<String, dynamic> data) {
-    if (_demoMode) return Future.value();
+    if (_demoMode) return;
     return _db.collection('posts').doc(postId).update(data);
   }
 
   Future<void> deletePost(String postId) {
-    if (_demoMode) return Future.value();
+    if (_demoMode) return;
     return _db.collection('posts').doc(postId).delete();
   }
 
@@ -131,7 +131,7 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Future<void> toggleLike(VideoPost post, String uid) async {
-    if (_demoMode) return Future.value();
+    if (_demoMode) return;
     final doc = _db.collection('postLikes').doc('${post.id}_$uid');
     final snap = await doc.get();
     if (snap.exists) {
@@ -178,7 +178,7 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Future<void> toggleFollow(UserProfile target, UserProfile me, String myUid) async {
-    if (_demoMode) return Future.value();
+    if (_demoMode) return;
     final doc = _db.collection('follows').doc('${myUid}_${target.uid}');
     final snap = await doc.get();
     if (snap.exists) {
@@ -221,7 +221,7 @@ Map<String, dynamic> _snapData(dynamic snap) =>
 
   // ------------------------------------------------------------- comments
   Future<void> addComment(String postId, String uid, String userName, String text) {
-    if (_demoMode) return Future.value();
+    if (_demoMode) return;
     final id = _db.collection('comments').doc().id;
     return _db.collection('comments').doc(id).set({
       'postId': postId,
@@ -248,7 +248,7 @@ Map<String, dynamic> _snapData(dynamic snap) =>
 
   // -------------------------------------------------------- notifications
   Future<void> addNotification(AppNotification n) {
-    if (_demoMode) return Future.value();
+    if (_demoMode) return;
     return _db.collection('notifications').doc(n.id).set(n.toMap());
   }
 
@@ -266,13 +266,13 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Future<void> markNotificationRead(String id) {
-    if (_demoMode) return Future.value();
+    if (_demoMode) return;
     return _db.collection('notifications').doc(id).update({'read': true});
   }
 
   // ----------------------------------------------------------------- lives
   Future<void> createLive(LiveRoom room) {
-    if (_demoMode) return Future.value();
+    if (_demoMode) return;
     return _db.collection('lives').doc(room.id).set(room.toMap());
   }
 
@@ -287,12 +287,12 @@ Map<String, dynamic> _snapData(dynamic snap) =>
   }
 
   Future<void> endLive(String id) {
-    if (_demoMode) return Future.value();
+    if (_demoMode) return;
     return _db.collection('lives').doc(id).update({'active': false});
   }
 
   Future<void> bumpLiveViewers(String id, int viewers) {
-    if (_demoMode) return Future.value();
+    if (_demoMode) return;
     return _db.collection('lives').doc(id).update({'viewers': viewers});
   }
 

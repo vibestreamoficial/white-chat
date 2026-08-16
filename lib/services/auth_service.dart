@@ -39,8 +39,7 @@ class AuthService {
         controller.onCancel = () => sub.cancel();
       });
     }
-    return _instance.authStateChanges()
-        .map((u) => u == null ? null : AppUser.fromFirebase(u));
+    return _instance.authStateChanges().map(AppUser.fromFirebase);
   }
 
   AppUser? get currentUser {
