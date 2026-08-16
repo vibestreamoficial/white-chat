@@ -1,15 +1,7 @@
 name: Build APK (WHITE CHAT)
 
-# Gera o APK debug e o APK release assinado em nuvem (GitHub Actions),
-# sem precisar instalar Flutter na sua maquina. Depois do build, os APKs
-# ficam disponiveis em Actions > (este workflow) > Artifacts.
-#
-# ANTES DE USAR:
-#  1. Crie o projeto Firebase e baixe o android/app/google-services.json
-#  2. No GitHub: Settings > Secrets and variables > Actions > New secret
-#     Nome:  FIREBASE_GOOGLE_SERVICES_JSON
-#     Valor: o conteudo inteiro do seu google-services.json
-#  3. Rode o workflow na aba Actions (ou em todo push na branch main)
+# Gera o APK debug e o APK release assinado em nuvem (GitHub Actions).
+# Sem o secret do Firebase, o APK sai em modo demonstracao (compila e roda).
 on:
   workflow_dispatch:
   push:
@@ -62,22 +54,22 @@ jobs:
           sender = data['project_info']['project_number']
           db_url = f"https://{project_id}-default-rtdb.firebaseio.com"
           content = f"""import 'package:firebase_core/firebase_core.dart';
-
-// Gerado automaticamente pelo workflow (build-apk.yml) a partir do
-// google-services.json. Rode 'flutterfire configure' para regenerar.
-class DefaultFirebaseOptions {{
-  DefaultFirebaseOptions._();
-
-  static const FirebaseOptions initial = FirebaseOptions(
-    apiKey: '{api_key}',
-    appId: '{app_id}',
-    messagingSenderId: '{sender}',
-    projectId: '{project_id}',
-    storageBucket: '{storage}',
-    databaseURL: '{db_url}',
-  );
-}}
-"""
+          
+          // Gerado automaticamente pelo workflow (build-apk.yml) a partir do
+          // google-services.json. Rode 'flutterfire configure' para regenerar.
+          class DefaultFirebaseOptions {{
+            DefaultFirebaseOptions._();
+          
+            static const FirebaseOptions initial = FirebaseOptions(
+              apiKey: '{api_key}',
+              appId: '{app_id}',
+              messagingSenderId: '{sender}',
+              projectId: '{project_id}',
+              storageBucket: '{storage}',
+              databaseURL: '{db_url}',
+            );
+          }}
+          """
           open('lib/firebase_options.dart', 'w').write(content)
           print('firebase_options.dart atualizado')
           EOF
