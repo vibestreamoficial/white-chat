@@ -54,6 +54,35 @@ jobs:
             echo "::warning::Sem secret FIREBASE_GOOGLE_SERVICES_JSON. O APK sai em modo demonstracao."
           fi
 
+      - name: Validar google-services.json (evita APK com API key invalida)
+        if: hashFiles('android/app/google-services.json') != ''
+        shell: bash
+        run: |
+          python3 - <<'EOF'
+          import json, sys
+          d = json.load(open('android/app/google-services.json'))
+          client = next(c for c in d['client'] if 'android_client_info' in c)
+          pkg = client['client_info']['android_client_info']['package_name']
+          key = next(k['current_key'] for k in client['api_key'])
+          app_id = client['client_info']['mobilesdk_app_id']
+          pid = d['project_info']['project_id']
+          ok = True
+          if pkg != 'com.whitechat.app':
+              print(f"::error::package_name no json ({pkg}) difere de com.whitechat.app")
+              ok = False
+          if not key.startswith('AIza') or len(key) < 30:
+              print(f"::error::api_key invalida no json (esperado AIza + 39 chars). Recebido: {key[:12]}...")
+              ok = False
+          if not app_id.startswith('1:'):
+              print(f"::error::mobilesdk_app_id com formato inesperado: {app_id}")
+              ok = False
+          if not pid:
+              print("::error::project_id vazio no json")
+              ok = False
+          print(f"JSON valido: package={pkg} project={pid} appId={app_id[:20]}...")
+          sys.exit(0 if ok else 1)
+          EOF
+
       - name: Preencher chaves do Firebase em lib/firebase_options.dart (se houver json)
         if: hashFiles('android/app/google-services.json') != ''
         shell: bash
