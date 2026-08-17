@@ -35,10 +35,14 @@ android {
         applicationId = "com.whitechat.app"
         // Android 12, 13 e 14
         minSdk = 31
-        targetSdk = 34
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
+
+        ndk {
+            abiFilters "arm64-v8a", "armeabi-v7a"
+        }
     }
 
     signingConfigs {
