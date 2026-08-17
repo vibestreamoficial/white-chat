@@ -58,7 +58,7 @@ jobs:
         if: hashFiles('android/app/google-services.json') != ''
         shell: bash
         run: |
-          python3 - <<'EOF'
+          python3 - <<'PYEOF'
           import json, sys
           d = json.load(open('android/app/google-services.json'))
           client = next(c for c in d['client'] if 'android_client_info' in c.get('client_info', {}))
@@ -77,13 +77,13 @@ jobs:
               print("::error::project_id vazio"); ok = False
           print(f"JSON valido: pkg={pkg} proj={pid}")
           sys.exit(0 if ok else 1)
-          EOF
+          PYEOF
 
       - name: Preencher firebase_options.dart
         if: hashFiles('android/app/google-services.json') != ''
         shell: bash
         run: |
-          python3 - <<'EOF'
+          python3 - <<'PYEOF'
           import json
           data = json.load(open('android/app/google-services.json'))
           client = next(c for c in data['client'] if 'android_client_info' in c.get('client_info', {}))
@@ -92,25 +92,26 @@ jobs:
           project_id = data['project_info']['project_id']
           storage = data['project_info']['storage_bucket']
           sender = data['project_info']['project_number']
-          db_url = f"https://{project_id}-default-rtdb.firebaseio.com"
-          content = f"""import 'package:firebase_core/firebase_core.dart';
-
-class DefaultFirebaseOptions {{
-  DefaultFirebaseOptions._();
-  static const bool configured = true;
-  static const FirebaseOptions initial = FirebaseOptions(
-    apiKey: '{api_key}',
-    appId: '{app_id}',
-    messagingSenderId: '{sender}',
-    projectId: '{project_id}',
-    storageBucket: '{storage}',
-    databaseURL: '{db_url}',
-  );
-}}
-"""
-          open('lib/firebase_options.dart', 'w').write(content)
+          db_url = "https://" + project_id + "-default-rtdb.firebaseio.com"
+          lines = [
+              "import 'package:firebase_core/firebase_core.dart';",
+              "",
+              "class DefaultFirebaseOptions {",
+              "  DefaultFirebaseOptions._();",
+              "  static const bool configured = true;",
+              "  static const FirebaseOptions initial = FirebaseOptions(",
+              "    apiKey: '" + api_key + "',",
+              "    appId: '" + app_id + "',",
+              "    messagingSenderId: '" + sender + "',",
+              "    projectId: '" + project_id + "',",
+              "    storageBucket: '" + storage + "',",
+              "    databaseURL: '" + db_url + "',",
+              "  );",
+              "}",
+          ]
+          open('lib/firebase_options.dart', 'w').write(chr(10).join(lines) + chr(10))
           print('firebase_options.dart atualizado')
-          EOF
+          PYEOF
 
       - name: flutter pub get
         run: flutter pub get
