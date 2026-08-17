@@ -6,22 +6,17 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
-// O plugin do google-services so e aplicado quando o google-services.json
-// existe. Sem ele o APK ainda compila (modo demonstracao: o app abre com a
-// tela de passo a passo do Firebase). Com o arquivo presente, tudo do
-// Firebase funciona normalmente.
 if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
 
 android {
     namespace = "com.whitechat.app"
-    compileSdk = 36
+    compileSdk = 34
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
         targetCompatibility = JavaVersion.VERSION_11
-        // Necessario para flutter_local_notifications
         isCoreLibraryDesugaringEnabled = true
     }
 
@@ -33,9 +28,8 @@ android {
 
     defaultConfig {
         applicationId = "com.whitechat.app"
-        // Android 12, 13 e 14
         minSdk = 31
-        targetSdk = 35
+        targetSdk = 34
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
@@ -59,6 +53,9 @@ android {
                 keyAlias = props["keyAlias"]
                 keyPassword = props["keyPassword"]
             }
+            v1SigningEnabled = true
+            v2SigningEnabled = true
+            v3SigningEnabled = true
         }
     }
 
@@ -71,7 +68,7 @@ android {
                 signingConfigs.getByName("debug")
             }
             isMinifyEnabled = true
-            isShrinkResources = false
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",

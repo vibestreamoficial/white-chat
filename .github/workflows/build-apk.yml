@@ -1,7 +1,5 @@
 name: Build APK (WHITE CHAT)
 
-# Gera o APK debug e o APK release assinado em nuvem (GitHub Actions).
-# Sem o secret do Firebase, o APK sai em modo demonstracao (compila e roda).
 on:
   workflow_dispatch:
   push:
@@ -14,12 +12,12 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 30
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Liberar espaco em disco (manter Android SDK)
+      - name: Liberar espaco em disco
         uses: jlumbroso/free-disk-space@main
         with:
           tool-cache: true
@@ -42,60 +40,21 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Criar google-services.json (secret ou firebase_config/)
+      - name: Criar google-services.json a partir do secret
         shell: bash
         env:
           GS_JSON: ${{ secrets.FIREBASE_GOOGLE_SERVICES_JSON }}
         run: |
           if [ -n "$GS_JSON" ]; then
             printf '%s' "$GS_JSON" > android/app/google-services.json
-            python3 - <<'DIAG'
-          v = open('android/app/google-services.json','rb').read().decode('utf-8','replace')
-          print('DIAG tamanho:', len(v))
-          print('DIAG primeiro_ord:', ord(v[0]) if v else -1)
-          print('DIAG ultimo_ord:', ord(v[-1]) if v else -1)
-          for frag in ['{', '}', 'project_info', 'AIza', 'client', 'package_name', 'http', 'base64', 'json']:
-              print('DIAG contem_' + frag.replace('{','chave_abre').replace('}','chave_fecha').replace('.','_') + ':', frag in v)
-          DIAG
-            python3 - <<'PYEOF' || echo "::warning::secret FIREBASE_GOOGLE_SERVICES_JSON nao e JSON/base64 valido"
-          import base64, json
-          path = 'android/app/google-services.json'
-          raw = open(path, 'rb').read()
-          text = raw.decode('utf-8', 'replace').strip()
-          if text.startswith('```'):
-              text = text.split('\n', 1)[-1].rsplit('```', 1)[0].strip()
-          if (text.startswith('"') and text.endswith('"')) or (text.startswith("'") and text.endswith("'")):
-              text = text[1:-1].strip()
-          candidates = []
-          for label, data in [('json', text)]:
-              try:
-                  candidates.append((label, json.loads(data)))
-                  break
-              except Exception:
-                  pass
-          else:
-              try:
-                  dec = base64.b64decode(text + '=' * (-len(text) % 4)).decode('utf-8')
-                  candidates.append(('base64', json.loads(dec)))
-              except Exception:
-                  pass
-          if not candidates:
-              raise SystemExit(1)
-          label, data = candidates[0]
-          open(path, 'w').write(json.dumps(data, indent=2))
-          print(f'google-services.json criado a partir do secret ({label}).')
-          PYEOF
+            python3 -c "import json;json.load(open('android/app/google-services.json'))" \
+              || { echo "::error::google-services.json invalido"; exit 1; }
+            echo "google-services.json criado."
+          else
+            echo "::warning::Sem secret FIREBASE_GOOGLE_SERVICES_JSON"
           fi
-          # Fallback: arquivo firebase_config/google-services.json enviado para o repo
-          if ! python3 -c "import json;json.load(open('android/app/google-services.json'))" 2>/dev/null && [ -f firebase_config/google-services.json ]; then
-            cp firebase_config/google-services.json android/app/google-services.json
-            echo "Usando firebase_config/google-services.json do repositorio."
-          fi
-          python3 -c "import json;json.load(open('android/app/google-services.json'))" \
-            || { echo "::error::Sem google-services.json valido. Cole o conteudo INTEIRO do arquivo no secret (comeca com { e termina com }) ou envie o arquivo para firebase_config/ no repo."; exit 1; }
-          echo "google-services.json OK."
 
-      - name: Validar google-services.json (evita APK com API key invalida)
+      - name: Validar google-services.json
         if: hashFiles('android/app/google-services.json') != ''
         shell: bash
         run: |
@@ -109,22 +68,18 @@ jobs:
           pid = d['project_info']['project_id']
           ok = True
           if pkg != 'com.whitechat.app':
-              print(f"::error::package_name no json ({pkg}) difere de com.whitechat.app")
-              ok = False
+              print(f"::error::package_name ({pkg}) difere de com.whitechat.app"); ok = False
           if not key.startswith('AIza') or len(key) < 30:
-              print(f"::error::api_key invalida no json (esperado AIza + 39 chars). Recebido: {key[:12]}...")
-              ok = False
+              print(f"::error::api_key invalida"); ok = False
           if not app_id.startswith('1:'):
-              print(f"::error::mobilesdk_app_id com formato inesperado: {app_id}")
-              ok = False
+              print(f"::error::app_id formato inesperado: {app_id}"); ok = False
           if not pid:
-              print("::error::project_id vazio no json")
-              ok = False
-          print(f"JSON valido: package={pkg} project={pid} appId={app_id[:20]}...")
+              print("::error::project_id vazio"); ok = False
+          print(f"JSON valido: pkg={pkg} proj={pid}")
           sys.exit(0 if ok else 1)
           EOF
 
-      - name: Preencher chaves do Firebase em lib/firebase_options.dart (se houver json)
+      - name: Preencher firebase_options.dart
         if: hashFiles('android/app/google-services.json') != ''
         shell: bash
         run: |
@@ -139,14 +94,10 @@ jobs:
           sender = data['project_info']['project_number']
           db_url = f"https://{project_id}-default-rtdb.firebaseio.com"
           content = f"""import 'package:firebase_core/firebase_core.dart';
-          
-          // Gerado automaticamente pelo workflow (build-apk.yml) a partir do
-          // google-services.json. Rode 'flutterfire configure' para regenerar.
+
           class DefaultFirebaseOptions {{
             DefaultFirebaseOptions._();
-          
             static const bool configured = true;
-          
             static const FirebaseOptions initial = FirebaseOptions(
               apiKey: '{api_key}',
               appId: '{app_id}',
@@ -164,24 +115,17 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
-      - name: Build APK debug
-        run: flutter build apk --debug
+      - name: Build APK arm64 (otimizado < 100MB)
+        run: flutter build apk --release --target-platform android-arm64
 
-      - name: Build APK release assinado
-        run: flutter build apk --release
-
-      - name: Build APKs por ABI (arm64 + armv7)
-        run: flutter build apk --release --split-per-abi --target-platform android-arm,android-arm64
-
-      - name: Renomear APK principal
+      - name: Renomear APK
         run: |
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk build/app/outputs/flutter-apk/white-chat-android12-16-arm64.apk 2>/dev/null || true
-          cp build/app/outputs/flutter-apk/app-armeabi-v7a-release.apk build/app/outputs/flutter-apk/white-chat-android12-16-armv7.apk 2>/dev/null || true
+          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
+             build/app/outputs/flutter-apk/White-Chat-v1.0.1-android12-16-arm64.apk
 
-      - name: Upload dos APKs
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: white-chat-apks
-          path: |
-            build/app/outputs/flutter-apk/*.apk
+          name: white-chat-v1.0.1
+          path: build/app/outputs/flutter-apk/White-Chat-v1.0.1-android12-16-arm64.apk
           retention-days: 30
