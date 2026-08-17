@@ -12,7 +12,7 @@ if (file("google-services.json").exists()) {
 
 android {
     namespace = "com.whitechat.app"
-    compileSdk = 34
+    compileSdk = 35
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -29,7 +29,7 @@ android {
     defaultConfig {
         applicationId = "com.whitechat.app"
         minSdk = 31
-        targetSdk = 34
+        targetSdk = 35
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
@@ -89,7 +89,7 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
-    implementation(platform("com.google.firebase:firebase-bom:32.7.2"))
+    implementation(platform("com.google.firebase:firebase-bom:33.7.0"))
     implementation("com.google.firebase:firebase-messaging")
     implementation("com.google.firebase:firebase-analytics")
     implementation("androidx.core:core-ktx:1.12.0")

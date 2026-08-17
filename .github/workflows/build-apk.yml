@@ -95,19 +95,19 @@ jobs:
           db_url = f"https://{project_id}-default-rtdb.firebaseio.com"
           content = f"""import 'package:firebase_core/firebase_core.dart';
 
-          class DefaultFirebaseOptions {{
-            DefaultFirebaseOptions._();
-            static const bool configured = true;
-            static const FirebaseOptions initial = FirebaseOptions(
-              apiKey: '{api_key}',
-              appId: '{app_id}',
-              messagingSenderId: '{sender}',
-              projectId: '{project_id}',
-              storageBucket: '{storage}',
-              databaseURL: '{db_url}',
-            );
-          }}
-          """
+class DefaultFirebaseOptions {{
+  DefaultFirebaseOptions._();
+  static const bool configured = true;
+  static const FirebaseOptions initial = FirebaseOptions(
+    apiKey: '{api_key}',
+    appId: '{app_id}',
+    messagingSenderId: '{sender}',
+    projectId: '{project_id}',
+    storageBucket: '{storage}',
+    databaseURL: '{db_url}',
+  );
+}}
+"""
           open('lib/firebase_options.dart', 'w').write(content)
           print('firebase_options.dart atualizado')
           EOF
@@ -115,13 +115,16 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
-      - name: Build APK arm64 (otimizado < 100MB)
+      - name: Build APK arm64
         run: flutter build apk --release --target-platform android-arm64
 
-      - name: Renomear APK
+      - name: Listar e renomear APK
         run: |
-          cp build/app/outputs/flutter-apk/app-arm64-v8a-release.apk \
-             build/app/outputs/flutter-apk/White-Chat-v1.0.1-android12-16-arm64.apk
+          ls -la build/app/outputs/flutter-apk/
+          APK_FILE=$(find build/app/outputs/flutter-apk/ -name "*.apk" | head -1)
+          echo "Found APK: $APK_FILE"
+          cp "$APK_FILE" build/app/outputs/flutter-apk/White-Chat-v1.0.1-android12-16-arm64.apk
+          ls -la build/app/outputs/flutter-apk/White-Chat-v1.0.1-android12-16-arm64.apk
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
