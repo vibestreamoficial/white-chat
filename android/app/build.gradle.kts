@@ -12,7 +12,7 @@ if (file("google-services.json").exists()) {
 
 android {
     namespace = "com.whitechat.app"
-    compileSdk = 35
+    compileSdk = 36
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_11
@@ -29,7 +29,7 @@ android {
     defaultConfig {
         applicationId = "com.whitechat.app"
         minSdk = 31
-        targetSdk = 35
+        targetSdk = 36
         versionCode = flutter.versionCode
         versionName = flutter.versionName
         multiDexEnabled = true
