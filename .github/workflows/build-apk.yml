@@ -102,7 +102,7 @@ jobs:
           python3 - <<'EOF'
           import json, sys
           d = json.load(open('android/app/google-services.json'))
-          client = next(c for c in d['client'] if 'android_client_info' in c)
+          client = next(c for c in d['client'] if 'android_client_info' in c.get('client_info', {}))
           pkg = client['client_info']['android_client_info']['package_name']
           key = next(k['current_key'] for k in client['api_key'])
           app_id = client['client_info']['mobilesdk_app_id']
@@ -131,7 +131,7 @@ jobs:
           python3 - <<'EOF'
           import json
           data = json.load(open('android/app/google-services.json'))
-          client = next(c for c in data['client'] if 'android_client_info' in c)
+          client = next(c for c in data['client'] if 'android_client_info' in c.get('client_info', {}))
           api_key = next(k['current_key'] for k in client['api_key'])
           app_id = client['client_info']['mobilesdk_app_id']
           project_id = data['project_info']['project_id']
