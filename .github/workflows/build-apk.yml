@@ -116,16 +116,19 @@ jobs:
       - name: flutter pub get
         run: flutter pub get
 
-      - name: Build APK arm64
-        run: flutter build apk --release --target-platform android-arm64
+      - name: Build APK split por ABI (arm64 apenas)
+        run: flutter build apk --release --split-per-abi --target-platform android-arm64
 
-      - name: Listar e renomear APK
+      - name: Renomear APK
         run: |
           ls -la build/app/outputs/flutter-apk/
-          APK_FILE=$(find build/app/outputs/flutter-apk/ -name "*.apk" | head -1)
-          echo "Found APK: $APK_FILE"
-          cp "$APK_FILE" build/app/outputs/flutter-apk/White-Chat-v1.0.1-android12-16-arm64.apk
-          ls -la build/app/outputs/flutter-apk/White-Chat-v1.0.1-android12-16-arm64.apk
+          ARM64_APK=$(find build/app/outputs/flutter-apk/ -name "*arm64*.apk" | head -1)
+          if [ -z "$ARM64_APK" ]; then
+            ARM64_APK=$(find build/app/outputs/flutter-apk/ -name "*.apk" | head -1)
+          fi
+          echo "Found APK: $ARM64_APK"
+          cp "$ARM64_APK" build/app/outputs/flutter-apk/White-Chat-v1.0.1-android12-16-arm64.apk
+          ls -lh build/app/outputs/flutter-apk/White-Chat-v1.0.1-android12-16-arm64.apk
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
