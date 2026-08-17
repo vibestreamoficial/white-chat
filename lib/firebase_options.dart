@@ -1,30 +1,18 @@
 import 'package:firebase_core/firebase_core.dart';
 
-// Gerado automaticamente (nao edite a mao).
-//
-// configured=false: o google-services.json ainda nao foi adicionado ao
-// projeto. O app abre normalmente no login e avisa com um SnackBar.
-//
-// Para ativar o Firebase de verdade:
-//   1) Baixe o google-services.json do seu projeto Firebase
-//      (app Android com pacote com.whitechat.app)
-//   2) Coloque o arquivo na pasta firebase_config/
-//   3) Rode: bash firebase_config/ativar_firebase.sh
-//
-// O script copia o arquivo para android/app/, gera este arquivo com as
-// chaves reais e recompila o APK.
+// Configurado com as credenciais reais do projeto white-chat-1940d.
+// Gerado a partir do google-services.json via CI.
 class DefaultFirebaseOptions {
   DefaultFirebaseOptions._();
 
-  /// true quando o Firebase real foi configurado.
-  static const bool configured = false;
+  static const bool configured = true;
 
   static const FirebaseOptions initial = FirebaseOptions(
-    apiKey: '',
-    appId: '',
-    messagingSenderId: '',
-    projectId: '',
-    storageBucket: '',
-    databaseURL: '',
+    apiKey: 'AIzaSyDDXrVfm77v5DJ8xX0kzs66ZCdZDS34hhQ',
+    appId: '1:259023716959:android:6c96b00ae69ab479',
+    messagingSenderId: '259023716959',
+    projectId: 'white-chat-1940d',
+    storageBucket: 'white-chat-1940d.firebasestorage.app',
+    databaseURL: 'https://white-chat-1940d-default-rtdb.firebaseio.com',
   );
 }
