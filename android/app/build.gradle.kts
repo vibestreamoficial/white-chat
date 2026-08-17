@@ -53,9 +53,6 @@ android {
                 keyAlias = props["keyAlias"]
                 keyPassword = props["keyPassword"]
             }
-            v1SigningEnabled = true
-            v2SigningEnabled = true
-            v3SigningEnabled = true
         }
     }
 
